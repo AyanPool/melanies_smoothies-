@@ -30,12 +30,16 @@ my_dataframe = session.table("smoothies.public.fruit_options") \
 
 fruit_rows = my_dataframe.collect()
 
-# Create mapping: UI name → API name
 fruit_dict = {row["FRUIT_NAME"]: row["SEARCH_ON"] for row in fruit_rows}
+
+pd_df = my_dataframe.to_pandas()
+st.dataframe(pd_df)
+
+# ❌ REMOVED: st.stop()
 
 ingredients_list = st.multiselect(
     'Choose up to 5 ingredients:',
-    list(fruit_dict.keys()),
+    list(fruit_dict.keys()),   # ✅ FIX: must be list, not dataframe
     max_selections=5
 )
 
@@ -48,16 +52,19 @@ if ingredients_list:
     for fruit_chosen in ingredients_list:
         ingredients_string += fruit_chosen + ' '
 
+        search_on = pd_df.loc[
+            pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'
+        ].iloc[0]
+
+        st.write('The search value for ', fruit_chosen,' is ', search_on, '.')
+
         st.subheader(fruit_chosen + ' Nutrition Information')
 
-        # Use SEARCH_ON for API
-        search_value = fruit_dict[fruit_chosen]
-
+        # ✅ FIX: use same variable consistently
         smoothiefroot_response = requests.get(
-            f"https://my.smoothiefroot.com/api/fruit/{search_value}"
+            f"https://my.smoothiefroot.com/api/fruit/{search_on}"
         )
 
-        # Display nutrition data
         st.dataframe(
             data=smoothiefroot_response.json(),
             use_container_width=True
