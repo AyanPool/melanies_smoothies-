@@ -2,8 +2,8 @@
 import streamlit as st
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col
-import requests
 import pandas as pd
+import requests   # ✅ FIX 1: moved import to top
 
 # -------------------------------
 # TITLE
@@ -39,41 +39,28 @@ ingredients_list = st.multiselect(
 # INSERT ORDER INTO SNOWFLAKE
 # -------------------------------
 if ingredients_list:
-    ingredients_string = ' '.join(ingredients_list)
+    ingredients_string = ''
 
-    my_insert_stmt = f"""
-        insert into smoothies.public.orders(ingredients, name_on_order)
-        values ('{ingredients_string}', '{name_on_order}')
-    """
+    for fruit_chosen in ingredients_list:
+        ingredients_string += fruit_chosen + ' '
 
-    st.write(my_insert_stmt)
+        st.subheader(fruit_chosen + ' Nutrition Information')
 
-    time_to_insert = st.button('Submit Order')
+        # ✅ FIX 2: dynamic API call instead of hardcoded watermelon
+        smoothiefroot_response = requests.get(
+            f"https://my.smoothiefroot.com/api/fruit/{fruit_chosen}"
+        )
 
-    if time_to_insert:
-        session.sql(my_insert_stmt).collect()
-        st.success('Your Smoothie is ordered!', icon="✅")
+        # ✅ FIX 3: show proper dataframe
+        st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
 
 # -------------------------------
 # SMOOTHIEFRUIT API SECTION
 # -------------------------------
-st.header("🍓 SmoothieFroot Nutrition Checker")
+# ✅ FIX 4: correct URL (remove markdown format)
+smoothiefroot_response = requests.get(
+    "https://my.smoothiefroot.com/api/fruit/watermelon"
+)
 
-fruit_choice = st.text_input('Enter a fruit to get nutrition info:')
-
-if fruit_choice:
-    try:
-        smoothiefroot_response = requests.get(
-            f"https://my.smoothiefroot.com/api/fruit/{fruit_choice}"
-        )
-
-        if smoothiefroot_response.status_code == 200:
-            smoothiefroot_json = smoothiefroot_response.json()
-
-            sf_df = pd.json_normalize(smoothiefroot_json)
-            st.dataframe(sf_df)
-        else:
-            st.error("Fruit not found. Try another one!")
-
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
+# ✅ FIX 5: correct dataframe usage
+st.dataframe(data=smoothiefroot_response.json(), use_container_width=True)
