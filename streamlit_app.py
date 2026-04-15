@@ -35,11 +35,12 @@ fruit_dict = {row["FRUIT_NAME"]: row["SEARCH_ON"] for row in fruit_rows}
 pd_df = my_dataframe.to_pandas()
 st.dataframe(pd_df)
 
-# ❌ REMOVED: st.stop()
-
+# -------------------------------
+# MULTISELECT
+# -------------------------------
 ingredients_list = st.multiselect(
     'Choose up to 5 ingredients:',
-    list(fruit_dict.keys()),   # ✅ FIX: must be list, not dataframe
+    list(fruit_dict.keys()),
     max_selections=5
 )
 
@@ -47,20 +48,19 @@ ingredients_list = st.multiselect(
 # INSERT ORDER INTO SNOWFLAKE
 # -------------------------------
 if ingredients_list:
-    ingredients_string = ''
+    # ✅ FIX: removes trailing space issue (VERY IMPORTANT)
+    ingredients_string = ' '.join(ingredients_list)
 
     for fruit_chosen in ingredients_list:
-        ingredients_string += fruit_chosen + ' '
 
         search_on = pd_df.loc[
             pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'
         ].iloc[0]
 
-        st.write('The search value for ', fruit_chosen,' is ', search_on, '.')
+        st.write('The search value for ', fruit_chosen, ' is ', search_on, '.')
 
         st.subheader(fruit_chosen + ' Nutrition Information')
 
-        # ✅ FIX: use same variable consistently
         smoothiefroot_response = requests.get(
             f"https://my.smoothiefroot.com/api/fruit/{search_on}"
         )
@@ -70,7 +70,9 @@ if ingredients_list:
             use_container_width=True
         )
 
-    # Insert into Snowflake
+    # -------------------------------
+    # INSERT QUERY
+    # -------------------------------
     my_insert_stmt = f"""
         INSERT INTO smoothies.public.orders(ingredients, name_on_order)
         VALUES ('{ingredients_string}', '{name_on_order}')
